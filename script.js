@@ -34,7 +34,10 @@ const incomingList = document.getElementById("incomingList");
 let lastPendingCount = 0;
 
 function formatYmd(date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function parseYmd(dateString) {
@@ -110,9 +113,6 @@ function buildDaySelect() {
     const option = document.createElement("option");
     option.value = day.id;
     option.textContent = day.label;
-    if (day.id !== todayId) {
-      option.disabled = true;
-    }
     daySelect.appendChild(option);
   });
 
@@ -283,8 +283,8 @@ function saveChildSubmission(userKey) {
   const selectedDayId = daySelect.value;
   childMessage.textContent = "";
 
-  if (selectedDayId !== todayId) {
-    childMessage.textContent = "На минулий день відправляти не можна. Доступний лише сьогоднішній день.";
+  if (selectedDayId > todayId) {
+    childMessage.textContent = "На майбутній день відправляти не можна.";
     return;
   }
 
@@ -294,11 +294,11 @@ function saveChildSubmission(userKey) {
   }
 
   const data = readData();
-  const missedDays = countMissedDays(data, userKey, todayId);
+  const missedDays = countMissedDays(data, userKey, selectedDayId);
   const selectedFile = proofFile.files[0];
 
-  data[todayId] = data[todayId] || {};
-  data[todayId][userKey] = {
+  data[selectedDayId] = data[selectedDayId] || {};
+  data[selectedDayId][userKey] = {
     submitted: true,
     submittedAt: new Date().toLocaleString("uk-UA"),
     parentConfirmed: false,
