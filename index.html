@@ -12,7 +12,7 @@
         <p class="chip">Сімейний трекер</p>
         <h1>Фізкультура: Віктор і Лукян</h1>
         <p class="subtitle">
-          Щоденні вправи: <strong>10 віджимань</strong>, <strong>20 присідань</strong>,
+          База на день: <strong>10 віджимань</strong>, <strong>20 присідань</strong>,
           <strong>25 прес</strong>, <strong>10 підстрибувань</strong>, <strong>5 кіл</strong>.
         </p>
       </header>
@@ -28,9 +28,6 @@
           <option value="viktor">Віктор</option>
           <option value="lukyan">Лукян</option>
         </select>
-        <p class="helper-text">
-          Після першого вибору роль блокується й автоматично відновлюється при наступному вході.
-        </p>
       </section>
 
       <section class="card hidden" id="childPanel">
@@ -38,6 +35,8 @@
 
         <label for="daySelect">День:</label>
         <select id="daySelect"></select>
+
+        <p id="debtInfo" class="debt-info"></p>
 
         <h3>Підтверди виконані вправи</h3>
         <ul class="exercise-list" id="exerciseList"></ul>
@@ -54,7 +53,7 @@
           <h2>Панель батька</h2>
           <div id="fatherNotification" class="notification">🔔 Нових повідомлень: 0</div>
         </div>
-        <p>Натисни «Підтвердити», коли перевіриш виконання вправ.</p>
+        <ul id="incomingList" class="incoming-list"></ul>
         <div class="table-wrap">
           <table>
             <thead>
