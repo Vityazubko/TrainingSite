@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Фізкультура — Віктор і Лукян</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Щоденник фізкультури</h1>
+      <p class="subtitle">
+        Вправи на день: <strong>10 віджимань</strong>, <strong>20 присідань</strong>,
+        <strong>25 прес</strong>, <strong>10 підстрибувань</strong>, <strong>5 кіл</strong>.
+      </p>
+
+      <section class="card">
+        <h2>Хто ти?</h2>
+        <select id="roleSelect">
+          <option value="">Оберіть роль</option>
+          <option value="father">Батько</option>
+          <option value="viktor">Віктор</option>
+          <option value="lukyan">Лукян</option>
+        </select>
+      </section>
+
+      <section class="card hidden" id="childPanel">
+        <h2 id="childTitle">Панель сина</h2>
+
+        <label for="daySelect">День:</label>
+        <select id="daySelect"></select>
+
+        <h3>Підтверди виконані вправи</h3>
+        <ul class="exercise-list" id="exerciseList"></ul>
+
+        <label for="proofFile">Підтвердження (фото/відео, необов'язково):</label>
+        <input id="proofFile" type="file" accept="image/*,video/*" />
+
+        <button id="submitBtn">Надіслати підтвердження</button>
+        <p id="childMessage" class="message"></p>
+      </section>
+
+      <section class="card hidden" id="fatherPanel">
+        <h2>Звіт для батька</h2>
+        <p>Стан виконання по днях:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>День</th>
+                <th>Віктор</th>
+                <th>Лукян</th>
+              </tr>
+            </thead>
+            <tbody id="statusTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
