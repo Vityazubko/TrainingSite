@@ -1,12 +1,13 @@
-const STORAGE_KEY = "fitness-tracker-data-v2";
+const STORAGE_KEY = "fitness-tracker-data-v3";
 const ROLE_KEY = "fitness-role-lock-v1";
+const START_DATE = "2026-03-12";
 
-const exercises = [
-  "10 віджимань",
-  "20 присідань",
-  "25 прес",
-  "10 підстрибувань",
-  "5 кіл",
+const exerciseTemplates = [
+  { key: "pushups", name: "віджимань", base: 10 },
+  { key: "squats", name: "присідань", base: 20 },
+  { key: "abs", name: "прес", base: 25 },
+  { key: "jumps", name: "підстрибувань", base: 10 },
+  { key: "laps", name: "кіл", base: 5 },
 ];
 
 const users = {
@@ -20,51 +21,54 @@ const childPanel = document.getElementById("childPanel");
 const fatherPanel = document.getElementById("fatherPanel");
 const childTitle = document.getElementById("childTitle");
 const daySelect = document.getElementById("daySelect");
+const debtInfo = document.getElementById("debtInfo");
 const exerciseList = document.getElementById("exerciseList");
 const submitBtn = document.getElementById("submitBtn");
 const childMessage = document.getElementById("childMessage");
 const statusTableBody = document.getElementById("statusTableBody");
 const proofFile = document.getElementById("proofFile");
 const fatherNotification = document.getElementById("fatherNotification");
+const incomingList = document.getElementById("incomingList");
 
-function getWeekDays() {
-  const now = new Date();
-  const day = now.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + mondayOffset);
+function formatYmd(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function parseYmd(dateString) {
+  return new Date(`${dateString}T00:00:00`);
+}
+
+function getDaysFromStart() {
+  const start = parseYmd(START_DATE);
+  const today = new Date();
+  const normalizedToday = parseYmd(formatYmd(today));
 
   const dayNames = [
+    "Неділя",
     "Понеділок",
     "Вівторок",
     "Середа",
     "Четвер",
     "Пʼятниця",
     "Субота",
-    "Неділя",
   ];
 
-  return dayNames.map((name, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
-    const uaDate = d.toLocaleDateString("uk-UA", {
+  const days = [];
+  const current = new Date(start);
+
+  while (current <= normalizedToday) {
+    const iso = formatYmd(current);
+    const uiDate = current.toLocaleDateString("uk-UA", {
       day: "2-digit",
       month: "2-digit",
+      year: "numeric",
     });
-    return { id: iso, label: `${name} (${uaDate})` };
-  });
-}
 
-const weekDays = getWeekDays();
+    days.push({ id: iso, label: `${dayNames[current.getDay()]} (${uiDate})` });
+    current.setDate(current.getDate() + 1);
+  }
 
-function readData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) : {};
-}
-
-function writeData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  return days;
 }
 
 function getLockedRole() {
@@ -78,37 +82,96 @@ function lockRole(role) {
   roleLockBadge.classList.remove("hidden");
 }
 
+function readData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : {};
+}
+
+function writeData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function countMissedDays(data, userKey, untilDayId) {
+  const days = getDaysFromStart();
+  let missed = 0;
+
+  for (const day of days) {
+    if (day.id >= untilDayId) {
+      break;
+    }
+
+    const entry = data[day.id]?.[userKey];
+    if (!entry || !entry.submitted) {
+      missed += 1;
+    }
+  }
+
+  return missed;
+}
+
+function getRequiredExercises(missedDays) {
+  const multiplier = missedDays + 1;
+  return exerciseTemplates.map((exercise) => ({
+    ...exercise,
+    amount: exercise.base * multiplier,
+  }));
+}
+
 function buildDaySelect() {
+  const days = getDaysFromStart();
   daySelect.innerHTML = "";
-  weekDays.forEach((d) => {
+
+  days.forEach((d) => {
     const option = document.createElement("option");
     option.value = d.id;
     option.textContent = d.label;
     daySelect.appendChild(option);
   });
 
-  const todayIso = new Date().toISOString().slice(0, 10);
-  if (weekDays.some((d) => d.id === todayIso)) {
+  const todayIso = formatYmd(new Date());
+  if (days.some((d) => d.id === todayIso)) {
     daySelect.value = todayIso;
   }
 }
 
-function buildExerciseList() {
+function updateChildExercisePlan() {
+  const role = getLockedRole();
+  if (role !== "viktor" && role !== "lukyan") {
+    return;
+  }
+
+  const data = readData();
+  const dayId = daySelect.value;
+  const missedDays = countMissedDays(data, role, dayId);
+  const requiredExercises = getRequiredExercises(missedDays);
+
+  debtInfo.textContent =
+    missedDays > 0
+      ? `Ти пропустив ${missedDays} дн. Норма на цей день збільшена.`
+      : "Пропусків немає. Сьогодні базова норма.";
+
   exerciseList.innerHTML = "";
-  exercises.forEach((name, idx) => {
+  requiredExercises.forEach((exercise, idx) => {
     const li = document.createElement("li");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.id = `ex-${idx}`;
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `ex-${idx}`;
 
     const label = document.createElement("label");
-    label.htmlFor = cb.id;
-    label.textContent = name;
+    label.htmlFor = checkbox.id;
+    label.textContent = `${exercise.amount} ${exercise.name}`;
 
-    li.appendChild(cb);
+    li.appendChild(checkbox);
     li.appendChild(label);
     exerciseList.appendChild(li);
   });
+}
+
+function allExercisesChecked() {
+  return [...exerciseList.querySelectorAll("input[type='checkbox']")].every(
+    (cb) => cb.checked
+  );
 }
 
 function clearExerciseChecks() {
@@ -118,33 +181,64 @@ function clearExerciseChecks() {
   proofFile.value = "";
 }
 
-function allExercisesChecked() {
-  return [...exerciseList.querySelectorAll("input[type='checkbox']")].every(
-    (cb) => cb.checked
-  );
-}
-
 function countPendingForFather(data) {
   let pending = 0;
+
   Object.values(data).forEach((dayEntry) => {
-    ["viktor", "lukyan"].forEach((user) => {
-      if (dayEntry[user] && dayEntry[user].submitted && !dayEntry[user].parentConfirmed) {
+    ["viktor", "lukyan"].forEach((userKey) => {
+      const entry = dayEntry[userKey];
+      if (entry?.submitted && !entry.parentConfirmed) {
         pending += 1;
       }
     });
   });
+
   return pending;
+}
+
+function renderIncomingMessages(data) {
+  incomingList.innerHTML = "";
+  const days = getDaysFromStart();
+  const dayMap = new Map(days.map((day) => [day.id, day.label]));
+  const messages = [];
+
+  Object.entries(data).forEach(([dayId, dayEntry]) => {
+    ["viktor", "lukyan"].forEach((userKey) => {
+      const entry = dayEntry[userKey];
+      if (entry?.submitted && !entry.parentConfirmed) {
+        messages.push(
+          `${users[userKey]} надіслав вправи за ${dayMap.get(dayId) || dayId} (${entry.submittedAt})`
+        );
+      }
+    });
+  });
+
+  if (messages.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "Нових повідомлень немає.";
+    incomingList.appendChild(li);
+    return;
+  }
+
+  messages.forEach((msg) => {
+    const li = document.createElement("li");
+    li.textContent = msg;
+    incomingList.appendChild(li);
+  });
 }
 
 function renderFatherNotification() {
   const data = readData();
   const pending = countPendingForFather(data);
   fatherNotification.textContent = `🔔 Нових повідомлень: ${pending}`;
+  renderIncomingMessages(data);
 }
 
-function formatStatus(dayId, userKey, entry) {
+function formatStatus(dayId, userKey, entry, data) {
+  const missed = countMissedDays(data, userKey, dayId);
+
   if (!entry || !entry.submitted) {
-    return '<span class="status-pending">❌ Немає відправки</span>';
+    return `<span class="status-pending">❌ Не зроблено</span><span class="proof">Борг днів до цієї дати: ${missed}</span>`;
   }
 
   const proofText = entry.proofName ? `Файл: ${entry.proofName}` : "Без файлу";
@@ -159,9 +253,10 @@ function formatStatus(dayId, userKey, entry) {
 
 function renderFatherTable() {
   const data = readData();
+  const days = getDaysFromStart();
   statusTableBody.innerHTML = "";
 
-  weekDays.forEach((day) => {
+  days.forEach((day) => {
     const tr = document.createElement("tr");
 
     const dayCell = document.createElement("td");
@@ -173,8 +268,8 @@ function renderFatherTable() {
     const viktorEntry = data[day.id]?.viktor;
     const lukyanEntry = data[day.id]?.lukyan;
 
-    viktorCell.innerHTML = formatStatus(day.id, "viktor", viktorEntry);
-    lukyanCell.innerHTML = formatStatus(day.id, "lukyan", lukyanEntry);
+    viktorCell.innerHTML = formatStatus(day.id, "viktor", viktorEntry, data);
+    lukyanCell.innerHTML = formatStatus(day.id, "lukyan", lukyanEntry, data);
 
     tr.appendChild(dayCell);
     tr.appendChild(viktorCell);
@@ -193,24 +288,26 @@ function saveChildSubmission(userKey) {
     return;
   }
 
-  const selectedFile = proofFile.files[0];
   const dayId = daySelect.value;
-
+  const selectedFile = proofFile.files[0];
   const data = readData();
-  data[dayId] = data[dayId] || {};
+  const missedDays = countMissedDays(data, userKey, dayId);
 
+  data[dayId] = data[dayId] || {};
   data[dayId][userKey] = {
     submitted: true,
     submittedAt: new Date().toLocaleString("uk-UA"),
     parentConfirmed: false,
     parentConfirmedAt: "",
     proofName: selectedFile ? selectedFile.name : "",
+    loadMultiplier: missedDays + 1,
   };
 
   writeData(data);
-  childMessage.textContent = "Відправлено! Батько отримав повідомлення 🔔";
+  childMessage.textContent = "Відправлено! Повідомлення для батька додано 🔔";
   clearExerciseChecks();
   renderFatherTable();
+  updateChildExercisePlan();
 }
 
 function confirmSubmission(dayId, userKey) {
@@ -242,6 +339,7 @@ function renderRole(role) {
     childPanel.classList.remove("hidden");
     childTitle.textContent = `Панель: ${users[role]}`;
     childMessage.textContent = "";
+    updateChildExercisePlan();
   }
 }
 
@@ -259,6 +357,10 @@ roleSelect.addEventListener("change", () => {
 
   lockRole(selectedRole);
   renderRole(selectedRole);
+});
+
+daySelect.addEventListener("change", () => {
+  updateChildExercisePlan();
 });
 
 submitBtn.addEventListener("click", () => {
@@ -286,7 +388,6 @@ statusTableBody.addEventListener("click", (event) => {
 });
 
 buildDaySelect();
-buildExerciseList();
 
 const lockedRole = getLockedRole();
 if (lockedRole) {
