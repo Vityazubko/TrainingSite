@@ -1,4 +1,5 @@
-const STORAGE_KEY = "fitness-tracker-data-v1";
+const STORAGE_KEY = "fitness-tracker-data-v2";
+const ROLE_KEY = "fitness-role-lock-v1";
 
 const exercises = [
   "10 віджимань",
@@ -8,7 +9,13 @@ const exercises = [
   "5 кіл",
 ];
 
+const users = {
+  viktor: "Віктор",
+  lukyan: "Лукян",
+};
+
 const roleSelect = document.getElementById("roleSelect");
+const roleLockBadge = document.getElementById("roleLockBadge");
 const childPanel = document.getElementById("childPanel");
 const fatherPanel = document.getElementById("fatherPanel");
 const childTitle = document.getElementById("childTitle");
@@ -18,11 +25,7 @@ const submitBtn = document.getElementById("submitBtn");
 const childMessage = document.getElementById("childMessage");
 const statusTableBody = document.getElementById("statusTableBody");
 const proofFile = document.getElementById("proofFile");
-
-const users = {
-  viktor: "Віктор",
-  lukyan: "Лукян",
-};
+const fatherNotification = document.getElementById("fatherNotification");
 
 function getWeekDays() {
   const now = new Date();
@@ -64,6 +67,17 @@ function writeData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function getLockedRole() {
+  return localStorage.getItem(ROLE_KEY) || "";
+}
+
+function lockRole(role) {
+  localStorage.setItem(ROLE_KEY, role);
+  roleSelect.value = role;
+  roleSelect.disabled = true;
+  roleLockBadge.classList.remove("hidden");
+}
+
 function buildDaySelect() {
   daySelect.innerHTML = "";
   weekDays.forEach((d) => {
@@ -97,12 +111,6 @@ function buildExerciseList() {
   });
 }
 
-function allExercisesChecked() {
-  return [...exerciseList.querySelectorAll("input[type='checkbox']")].every(
-    (cb) => cb.checked
-  );
-}
-
 function clearExerciseChecks() {
   exerciseList
     .querySelectorAll("input[type='checkbox']")
@@ -110,15 +118,43 @@ function clearExerciseChecks() {
   proofFile.value = "";
 }
 
-function formatStatus(entry) {
-  if (!entry) {
-    return '<span class="status-pending">❌ Немає</span>';
+function allExercisesChecked() {
+  return [...exerciseList.querySelectorAll("input[type='checkbox']")].every(
+    (cb) => cb.checked
+  );
+}
+
+function countPendingForFather(data) {
+  let pending = 0;
+  Object.values(data).forEach((dayEntry) => {
+    ["viktor", "lukyan"].forEach((user) => {
+      if (dayEntry[user] && dayEntry[user].submitted && !dayEntry[user].parentConfirmed) {
+        pending += 1;
+      }
+    });
+  });
+  return pending;
+}
+
+function renderFatherNotification() {
+  const data = readData();
+  const pending = countPendingForFather(data);
+  fatherNotification.textContent = `🔔 Нових повідомлень: ${pending}`;
+}
+
+function formatStatus(dayId, userKey, entry) {
+  if (!entry || !entry.submitted) {
+    return '<span class="status-pending">❌ Немає відправки</span>';
   }
 
-  const proofText = entry.proofName
-    ? `Файл: ${entry.proofName}`
-    : "Без файлу";
-  return `<span class="status-ok">✅ Виконано</span><span class="proof">${entry.time}. ${proofText}</span>`;
+  const proofText = entry.proofName ? `Файл: ${entry.proofName}` : "Без файлу";
+  const sentInfo = `Відправлено: ${entry.submittedAt}. ${proofText}`;
+
+  if (entry.parentConfirmed) {
+    return `<span class="status-ok">✅ Підтверджено батьком</span><span class="proof">${sentInfo}<br>Підтверджено: ${entry.parentConfirmedAt}</span>`;
+  }
+
+  return `<span class="status-wait">🟠 Очікує підтвердження батька</span><span class="proof">${sentInfo}</span><button class="confirm-btn" data-day="${dayId}" data-user="${userKey}">Підтвердити</button>`;
 }
 
 function renderFatherTable() {
@@ -137,45 +173,62 @@ function renderFatherTable() {
     const viktorEntry = data[day.id]?.viktor;
     const lukyanEntry = data[day.id]?.lukyan;
 
-    viktorCell.innerHTML = formatStatus(viktorEntry);
-    lukyanCell.innerHTML = formatStatus(lukyanEntry);
+    viktorCell.innerHTML = formatStatus(day.id, "viktor", viktorEntry);
+    lukyanCell.innerHTML = formatStatus(day.id, "lukyan", lukyanEntry);
 
     tr.appendChild(dayCell);
     tr.appendChild(viktorCell);
     tr.appendChild(lukyanCell);
-
     statusTableBody.appendChild(tr);
   });
+
+  renderFatherNotification();
 }
 
 function saveChildSubmission(userKey) {
   childMessage.textContent = "";
 
   if (!allExercisesChecked()) {
-    childMessage.textContent = "Будь ласка, відміть усі вправи перед надсиланням.";
+    childMessage.textContent = "Познач усі вправи перед відправкою.";
     return;
   }
 
-  const dateKey = daySelect.value;
   const selectedFile = proofFile.files[0];
+  const dayId = daySelect.value;
 
   const data = readData();
-  data[dateKey] = data[dateKey] || {};
-  data[dateKey][userKey] = {
-    exercisesDone: true,
-    time: new Date().toLocaleString("uk-UA"),
+  data[dayId] = data[dayId] || {};
+
+  data[dayId][userKey] = {
+    submitted: true,
+    submittedAt: new Date().toLocaleString("uk-UA"),
+    parentConfirmed: false,
+    parentConfirmedAt: "",
     proofName: selectedFile ? selectedFile.name : "",
   };
 
   writeData(data);
-  childMessage.textContent = "Готово! Підтвердження збережено ✅";
+  childMessage.textContent = "Відправлено! Батько отримав повідомлення 🔔";
   clearExerciseChecks();
   renderFatherTable();
 }
 
-roleSelect.addEventListener("change", () => {
-  const role = roleSelect.value;
+function confirmSubmission(dayId, userKey) {
+  const data = readData();
+  const entry = data[dayId]?.[userKey];
 
+  if (!entry || !entry.submitted) {
+    return;
+  }
+
+  entry.parentConfirmed = true;
+  entry.parentConfirmedAt = new Date().toLocaleString("uk-UA");
+
+  writeData(data);
+  renderFatherTable();
+}
+
+function renderRole(role) {
   childPanel.classList.add("hidden");
   fatherPanel.classList.add("hidden");
 
@@ -189,20 +242,54 @@ roleSelect.addEventListener("change", () => {
     childPanel.classList.remove("hidden");
     childTitle.textContent = `Панель: ${users[role]}`;
     childMessage.textContent = "";
+  }
+}
+
+roleSelect.addEventListener("change", () => {
+  const lockedRole = getLockedRole();
+  if (lockedRole) {
+    roleSelect.value = lockedRole;
     return;
   }
+
+  const selectedRole = roleSelect.value;
+  if (!selectedRole) {
+    return;
+  }
+
+  lockRole(selectedRole);
+  renderRole(selectedRole);
 });
 
 submitBtn.addEventListener("click", () => {
-  const role = roleSelect.value;
+  const role = getLockedRole();
   if (role !== "viktor" && role !== "lukyan") {
-    childMessage.textContent = "Спочатку обери хто ти.";
+    childMessage.textContent = "Тільки Віктор або Лукян можуть надсилати вправи.";
     return;
   }
 
   saveChildSubmission(role);
 });
 
+statusTableBody.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || !target.classList.contains("confirm-btn")) {
+    return;
+  }
+
+  const role = getLockedRole();
+  if (role !== "father") {
+    return;
+  }
+
+  confirmSubmission(target.dataset.day, target.dataset.user);
+});
+
 buildDaySelect();
 buildExerciseList();
-renderFatherTable();
+
+const lockedRole = getLockedRole();
+if (lockedRole) {
+  lockRole(lockedRole);
+  renderRole(lockedRole);
+}
