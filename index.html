@@ -3,25 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Фізкультура — Віктор і Лукян</title>
+    <title>Сімейний контроль фізкультури</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="container">
-      <h1>Щоденник фізкультури</h1>
-      <p class="subtitle">
-        Вправи на день: <strong>10 віджимань</strong>, <strong>20 присідань</strong>,
-        <strong>25 прес</strong>, <strong>10 підстрибувань</strong>, <strong>5 кіл</strong>.
-      </p>
+      <header class="hero card">
+        <p class="chip">Сімейний трекер</p>
+        <h1>Фізкультура: Віктор і Лукян</h1>
+        <p class="subtitle">
+          Щоденні вправи: <strong>10 віджимань</strong>, <strong>20 присідань</strong>,
+          <strong>25 прес</strong>, <strong>10 підстрибувань</strong>, <strong>5 кіл</strong>.
+        </p>
+      </header>
 
       <section class="card">
-        <h2>Хто ти?</h2>
+        <div class="role-line">
+          <h2>Хто ти?</h2>
+          <span id="roleLockBadge" class="lock-badge hidden">Роль зафіксована</span>
+        </div>
         <select id="roleSelect">
           <option value="">Оберіть роль</option>
           <option value="father">Батько</option>
           <option value="viktor">Віктор</option>
           <option value="lukyan">Лукян</option>
         </select>
+        <p class="helper-text">
+          Після першого вибору роль блокується й автоматично відновлюється при наступному вході.
+        </p>
       </section>
 
       <section class="card hidden" id="childPanel">
@@ -33,16 +42,19 @@
         <h3>Підтверди виконані вправи</h3>
         <ul class="exercise-list" id="exerciseList"></ul>
 
-        <label for="proofFile">Підтвердження (фото/відео, необов'язково):</label>
+        <label for="proofFile">Додай підтвердження (фото/відео, необов'язково):</label>
         <input id="proofFile" type="file" accept="image/*,video/*" />
 
-        <button id="submitBtn">Надіслати підтвердження</button>
+        <button id="submitBtn">Надіслати батькові</button>
         <p id="childMessage" class="message"></p>
       </section>
 
       <section class="card hidden" id="fatherPanel">
-        <h2>Звіт для батька</h2>
-        <p>Стан виконання по днях:</p>
+        <div class="father-top">
+          <h2>Панель батька</h2>
+          <div id="fatherNotification" class="notification">🔔 Нових повідомлень: 0</div>
+        </div>
+        <p>Натисни «Підтвердити», коли перевіриш виконання вправ.</p>
         <div class="table-wrap">
           <table>
             <thead>
