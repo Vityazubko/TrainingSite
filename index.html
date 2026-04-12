@@ -20,7 +20,7 @@
       <section class="card">
         <div class="role-line">
           <h2>Хто ти?</h2>
-          <span id="roleLockBadge" class="lock-badge hidden">Роль зафіксована</span>
+          <span id="roleLockBadge" class="lock-badge hidden">Роль збережена</span>
         </div>
         <select id="roleSelect">
           <option value="">Оберіть роль</option>
@@ -33,10 +33,13 @@
       <section class="card hidden" id="childPanel">
         <h2 id="childTitle">Панель сина</h2>
 
-        <label for="daySelect">День:</label>
+        <label for="daySelect">Вибір дня (лише сьогодні доступно для виконання):</label>
         <select id="daySelect"></select>
 
         <p id="debtInfo" class="debt-info"></p>
+
+        <h3>Календар виконання</h3>
+        <div id="childCalendar" class="calendar-grid"></div>
 
         <h3>Підтверди виконані вправи</h3>
         <ul class="exercise-list" id="exerciseList"></ul>
