@@ -56,6 +56,13 @@ body {
   color: var(--muted);
 }
 
+.sync-note {
+  margin: 0;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .role-line {
   display: flex;
   align-items: center;
