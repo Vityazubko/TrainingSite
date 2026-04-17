@@ -1,4 +1,3 @@
-const STORAGE_KEY = "fitness-tracker-data-v4";
 const ROLE_KEY = "fitness-last-role-v1";
 const START_DATE = "2026-04-12";
 
@@ -32,6 +31,7 @@ const fatherNotification = document.getElementById("fatherNotification");
 const incomingList = document.getElementById("incomingList");
 
 let lastPendingCount = 0;
+let appData = { days: {} };
 
 function formatYmd(date) {
   const y = date.getFullYear();
@@ -72,13 +72,36 @@ function getDaysFromStart() {
   return days;
 }
 
-function readData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) : {};
+async function fetchData() {
+  const response = await fetch("/api/data", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("Не вдалося завантажити дані з сервера");
+  }
+  appData = await response.json();
 }
 
-function writeData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+async function submitToServer(dayId, userKey, proofName, loadMultiplier) {
+  const response = await fetch("/api/submission", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dayId, userKey, proofName, loadMultiplier }),
+  });
+  if (!response.ok) {
+    throw new Error("Помилка відправки на сервер");
+  }
+  appData = await response.json();
+}
+
+async function confirmOnServer(dayId, userKey) {
+  const response = await fetch("/api/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dayId, userKey }),
+  });
+  if (!response.ok) {
+    throw new Error("Помилка підтвердження");
+  }
+  appData = await response.json();
 }
 
 function getRole() {
@@ -90,13 +113,13 @@ function saveRole(role) {
   roleLockBadge.classList.remove("hidden");
 }
 
-function countMissedDays(data, userKey, untilDayId) {
+function countMissedDays(userKey, untilDayId) {
   let missed = 0;
   for (const day of getDaysFromStart()) {
     if (day.id >= untilDayId) {
       break;
     }
-    const entry = data[day.id]?.[userKey];
+    const entry = appData.days?.[day.id]?.[userKey];
     if (!entry || !entry.submitted) {
       missed += 1;
     }
@@ -107,7 +130,6 @@ function countMissedDays(data, userKey, untilDayId) {
 function buildDaySelect() {
   const days = getDaysFromStart();
   const todayId = formatYmd(new Date());
-
   daySelect.innerHTML = "";
   days.forEach((day) => {
     const option = document.createElement("option");
@@ -115,26 +137,22 @@ function buildDaySelect() {
     option.textContent = day.label;
     daySelect.appendChild(option);
   });
-
   daySelect.value = todayId;
 }
 
 function getRequiredExercises(missedDays) {
   const multiplier = missedDays + 1;
-  return exerciseTemplates.map((item) => ({
-    title: `${item.base * multiplier} ${item.name}`,
-  }));
+  return exerciseTemplates.map((item) => `${item.base * multiplier} ${item.name}`);
 }
 
-function renderChildCalendar(role, data) {
+function renderChildCalendar(role) {
   const days = getDaysFromStart();
   const todayId = formatYmd(new Date());
   childCalendar.innerHTML = "";
 
   days.forEach((day) => {
-    const entry = data[day.id]?.[role];
+    const entry = appData.days?.[day.id]?.[role];
     const isDone = Boolean(entry?.submitted);
-
     const item = document.createElement("div");
     item.className = `calendar-item ${isDone ? "done" : "missed"} ${day.id === todayId ? "today" : ""}`;
     item.innerHTML = `<strong>${day.label}</strong><br>${isDone ? "✅ Зроблено" : "❌ Не зроблено"}`;
@@ -148,15 +166,14 @@ function updateChildExercisePlan() {
     return;
   }
 
-  const data = readData();
   const dayId = daySelect.value;
-  const missedDays = countMissedDays(data, role, dayId);
+  const missedDays = countMissedDays(role, dayId);
   const required = getRequiredExercises(missedDays);
 
   debtInfo.textContent =
     missedDays > 0
-      ? `Є пропуски: ${missedDays} дн. Тому сьогодні навантаження збільшене.`
-      : "Пропусків нема. Сьогодні базове навантаження.";
+      ? `Є пропуски: ${missedDays} дн. Тому навантаження збільшене.`
+      : "Пропусків нема. Базове навантаження.";
 
   exerciseList.innerHTML = "";
   required.forEach((exercise, idx) => {
@@ -166,13 +183,13 @@ function updateChildExercisePlan() {
     cb.id = `ex-${idx}`;
     const label = document.createElement("label");
     label.htmlFor = cb.id;
-    label.textContent = exercise.title;
+    label.textContent = exercise;
     li.appendChild(cb);
     li.appendChild(label);
     exerciseList.appendChild(li);
   });
 
-  renderChildCalendar(role, data);
+  renderChildCalendar(role);
 }
 
 function allExercisesChecked() {
@@ -186,9 +203,9 @@ function clearExerciseChecks() {
   proofFile.value = "";
 }
 
-function countPending(data) {
+function countPending() {
   let count = 0;
-  Object.values(data).forEach((dayEntry) => {
+  Object.values(appData.days || {}).forEach((dayEntry) => {
     ["viktor", "lukyan"].forEach((userKey) => {
       if (dayEntry[userKey]?.submitted && !dayEntry[userKey]?.parentConfirmed) {
         count += 1;
@@ -198,12 +215,12 @@ function countPending(data) {
   return count;
 }
 
-function renderIncoming(data) {
+function renderIncoming() {
   incomingList.innerHTML = "";
   const daysMap = new Map(getDaysFromStart().map((d) => [d.id, d.label]));
-
   const pendingItems = [];
-  Object.entries(data).forEach(([dayId, dayEntry]) => {
+
+  Object.entries(appData.days || {}).forEach(([dayId, dayEntry]) => {
     ["viktor", "lukyan"].forEach((userKey) => {
       const entry = dayEntry[userKey];
       if (entry?.submitted && !entry.parentConfirmed) {
@@ -227,23 +244,19 @@ function renderIncoming(data) {
 }
 
 function renderFatherNotification() {
-  const data = readData();
-  const pending = countPending(data);
+  const pending = countPending();
   fatherNotification.textContent = `🔔 Нових повідомлень: ${pending}`;
-
-  const role = getRole();
-  if (role === "father" && pending > lastPendingCount) {
+  if (getRole() === "father" && pending > lastPendingCount) {
     fatherNotification.textContent = `🔔 Нове повідомлення! Очікують: ${pending}`;
   }
   lastPendingCount = pending;
-
-  renderIncoming(data);
+  renderIncoming();
 }
 
-function formatStatus(dayId, userKey, entry, data) {
-  const missed = countMissedDays(data, userKey, dayId);
+function formatStatus(dayId, userKey, entry) {
+  const missed = countMissedDays(userKey, dayId);
   if (!entry?.submitted) {
-    return `<span class="status-pending">❌ Не зроблено</span><span class="proof">Пропущено днів до цієї дати: ${missed}</span>`;
+    return `<span class="status-pending">❌ Не зроблено</span><span class="proof">Пропущено до цієї дати: ${missed} дн.</span>`;
   }
 
   const proof = entry.proofName ? `Файл: ${entry.proofName}` : "Без файлу";
@@ -255,7 +268,6 @@ function formatStatus(dayId, userKey, entry, data) {
 }
 
 function renderFatherTable() {
-  const data = readData();
   statusTableBody.innerHTML = "";
 
   getDaysFromStart().forEach((day) => {
@@ -266,8 +278,8 @@ function renderFatherTable() {
     const viktorCell = document.createElement("td");
     const lukyanCell = document.createElement("td");
 
-    viktorCell.innerHTML = formatStatus(day.id, "viktor", data[day.id]?.viktor, data);
-    lukyanCell.innerHTML = formatStatus(day.id, "lukyan", data[day.id]?.lukyan, data);
+    viktorCell.innerHTML = formatStatus(day.id, "viktor", appData.days?.[day.id]?.viktor);
+    lukyanCell.innerHTML = formatStatus(day.id, "lukyan", appData.days?.[day.id]?.lukyan);
 
     tr.appendChild(dayCell);
     tr.appendChild(viktorCell);
@@ -278,7 +290,7 @@ function renderFatherTable() {
   renderFatherNotification();
 }
 
-function saveChildSubmission(userKey) {
+async function saveChildSubmission(userKey) {
   const todayId = formatYmd(new Date());
   const selectedDayId = daySelect.value;
   childMessage.textContent = "";
@@ -293,36 +305,32 @@ function saveChildSubmission(userKey) {
     return;
   }
 
-  const data = readData();
-  const missedDays = countMissedDays(data, userKey, selectedDayId);
-  const selectedFile = proofFile.files[0];
+  try {
+    const missedDays = countMissedDays(userKey, selectedDayId);
+    const selectedFile = proofFile.files[0];
+    await submitToServer(
+      selectedDayId,
+      userKey,
+      selectedFile ? selectedFile.name : "",
+      missedDays + 1
+    );
 
-  data[selectedDayId] = data[selectedDayId] || {};
-  data[selectedDayId][userKey] = {
-    submitted: true,
-    submittedAt: new Date().toLocaleString("uk-UA"),
-    parentConfirmed: false,
-    proofName: selectedFile ? selectedFile.name : "",
-    loadMultiplier: missedDays + 1,
-  };
-
-  writeData(data);
-  childMessage.textContent = "Вправи надіслані батькові ✅";
-  clearExerciseChecks();
-  renderFatherTable();
-  updateChildExercisePlan();
+    childMessage.textContent = "Вправи надіслані батькові ✅";
+    clearExerciseChecks();
+    renderFatherTable();
+    updateChildExercisePlan();
+  } catch (error) {
+    childMessage.textContent = "Помилка відправки. Перевірте зʼєднання з сервером.";
+  }
 }
 
-function confirmSubmission(dayId, userKey) {
-  const data = readData();
-  const entry = data[dayId]?.[userKey];
-  if (!entry?.submitted) {
-    return;
+async function confirmSubmission(dayId, userKey) {
+  try {
+    await confirmOnServer(dayId, userKey);
+    renderFatherTable();
+  } catch (error) {
+    fatherNotification.textContent = "⚠️ Не вдалося підтвердити";
   }
-
-  entry.parentConfirmed = true;
-  writeData(data);
-  renderFatherTable();
 }
 
 function renderRole(role) {
@@ -375,24 +383,29 @@ statusTableBody.addEventListener("click", (event) => {
   confirmSubmission(target.dataset.day, target.dataset.user);
 });
 
-window.addEventListener("storage", (event) => {
-  if (event.key !== STORAGE_KEY) {
-    return;
+async function refreshDataAndRender() {
+  try {
+    await fetchData();
+    const role = getRole();
+    if (role) {
+      renderRole(role);
+    }
+  } catch (error) {
+    fatherNotification.textContent = "⚠️ Сервер недоступний";
   }
-
-  if (getRole() === "father") {
-    renderFatherTable();
-  }
-
-  if (getRole() === "viktor" || getRole() === "lukyan") {
-    updateChildExercisePlan();
-  }
-});
-
-buildDaySelect();
-const savedRole = getRole();
-if (savedRole) {
-  roleSelect.value = savedRole;
-  roleLockBadge.classList.remove("hidden");
-  renderRole(savedRole);
 }
+
+async function init() {
+  buildDaySelect();
+
+  const savedRole = getRole();
+  if (savedRole) {
+    roleSelect.value = savedRole;
+    roleLockBadge.classList.remove("hidden");
+  }
+
+  await refreshDataAndRender();
+  setInterval(refreshDataAndRender, 5000);
+}
+
+init();
