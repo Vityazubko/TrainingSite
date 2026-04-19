@@ -21,7 +21,15 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
+
+function setCorsHeaders(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
 function sendJson(res, status, payload) {
+  setCorsHeaders(res);
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
@@ -59,6 +67,12 @@ function contentType(filePath) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+
+    if (req.method === 'OPTIONS') {
+      setCorsHeaders(res);
+      res.writeHead(204);
+      return res.end();
+    }
 
     if (url.pathname === '/api/data' && req.method === 'GET') {
       return sendJson(res, 200, readData());
@@ -111,6 +125,7 @@ const server = http.createServer(async (req, res) => {
       return res.end('Not found');
     }
 
+    setCorsHeaders(res);
     res.writeHead(200, { 'Content-Type': contentType(filePath) });
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
