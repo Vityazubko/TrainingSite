@@ -75,7 +75,8 @@ function getDaysFromStart() {
 async function fetchData() {
   const response = await fetch("/api/data", { cache: "no-store" });
   if (!response.ok) {
-    throw new Error("Не вдалося завантажити дані з сервера");
+    const details = await response.text();
+    throw new Error(`Сервер відповів помилкою (${response.status}). ${details}`);
   }
   appData = await response.json();
 }
@@ -87,7 +88,8 @@ async function submitToServer(dayId, userKey, proofName, loadMultiplier) {
     body: JSON.stringify({ dayId, userKey, proofName, loadMultiplier }),
   });
   if (!response.ok) {
-    throw new Error("Помилка відправки на сервер");
+    const details = await response.text();
+    throw new Error(`Помилка відправки (${response.status}). ${details}`);
   }
   appData = await response.json();
 }
@@ -99,7 +101,8 @@ async function confirmOnServer(dayId, userKey) {
     body: JSON.stringify({ dayId, userKey }),
   });
   if (!response.ok) {
-    throw new Error("Помилка підтвердження");
+    const details = await response.text();
+    throw new Error(`Помилка підтвердження (${response.status}). ${details}`);
   }
   appData = await response.json();
 }
@@ -320,7 +323,7 @@ async function saveChildSubmission(userKey) {
     renderFatherTable();
     updateChildExercisePlan();
   } catch (error) {
-    childMessage.textContent = "Помилка відправки. Перевірте зʼєднання з сервером.";
+    childMessage.textContent = `Помилка відправки: ${error.message}. Це не про інтернет, а про доступ до API /api/* (перевір, що запущено node server.js і сайт відкрито з цього сервера).`;
   }
 }
 
@@ -329,7 +332,7 @@ async function confirmSubmission(dayId, userKey) {
     await confirmOnServer(dayId, userKey);
     renderFatherTable();
   } catch (error) {
-    fatherNotification.textContent = "⚠️ Не вдалося підтвердити";
+    fatherNotification.textContent = `⚠️ Не вдалося підтвердити: ${error.message}`;
   }
 }
 
@@ -391,7 +394,7 @@ async function refreshDataAndRender() {
       renderRole(role);
     }
   } catch (error) {
-    fatherNotification.textContent = "⚠️ Сервер недоступний";
+    fatherNotification.textContent = `⚠️ API недоступний: ${error.message}`;
   }
 }
 
