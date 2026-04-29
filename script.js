@@ -1,4 +1,5 @@
 const ROLE_KEY = "fitness-last-role-v1";
+const API_BASE_KEY = "fitness-api-base-v1";
 const START_DATE = "2026-04-12";
 
 const exerciseTemplates = [
@@ -29,6 +30,9 @@ const statusTableBody = document.getElementById("statusTableBody");
 const proofFile = document.getElementById("proofFile");
 const fatherNotification = document.getElementById("fatherNotification");
 const incomingList = document.getElementById("incomingList");
+const apiBaseInput = document.getElementById("apiBaseInput");
+const saveApiBaseBtn = document.getElementById("saveApiBaseBtn");
+const apiStatus = document.getElementById("apiStatus");
 
 let lastPendingCount = 0;
 let appData = { days: {} };
@@ -42,6 +46,20 @@ function formatYmd(date) {
 
 function parseYmd(dateString) {
   return new Date(`${dateString}T00:00:00`);
+}
+
+
+function getApiBase() {
+  const stored = localStorage.getItem(API_BASE_KEY);
+  return stored || window.location.origin;
+}
+
+function setApiBase(baseUrl) {
+  localStorage.setItem(API_BASE_KEY, baseUrl);
+}
+
+function apiUrl(pathname) {
+  return `${getApiBase()}${pathname}`;
 }
 
 function getDaysFromStart() {
@@ -73,7 +91,7 @@ function getDaysFromStart() {
 }
 
 async function fetchData() {
-  const response = await fetch("/api/data", { cache: "no-store" });
+  const response = await fetch(apiUrl("/api/data"), { cache: "no-store" });
   if (!response.ok) {
     const details = await response.text();
     throw new Error(`Сервер відповів помилкою (${response.status}). ${details}`);
@@ -82,7 +100,7 @@ async function fetchData() {
 }
 
 async function submitToServer(dayId, userKey, proofName, loadMultiplier) {
-  const response = await fetch("/api/submission", {
+  const response = await fetch(apiUrl("/api/submission"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ dayId, userKey, proofName, loadMultiplier }),
@@ -95,7 +113,7 @@ async function submitToServer(dayId, userKey, proofName, loadMultiplier) {
 }
 
 async function confirmOnServer(dayId, userKey) {
-  const response = await fetch("/api/confirm", {
+  const response = await fetch(apiUrl("/api/confirm"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ dayId, userKey }),
@@ -323,7 +341,7 @@ async function saveChildSubmission(userKey) {
     renderFatherTable();
     updateChildExercisePlan();
   } catch (error) {
-    childMessage.textContent = `Помилка відправки: ${error.message}. Це не про інтернет, а про доступ до API /api/* (перевір, що запущено node server.js і сайт відкрито з цього сервера).`;
+    childMessage.textContent = `Помилка відправки: ${error.message}. Перевір адресу сервера: ${getApiBase()}`;
   }
 }
 
@@ -394,18 +412,38 @@ async function refreshDataAndRender() {
       renderRole(role);
     }
   } catch (error) {
-    fatherNotification.textContent = `⚠️ API недоступний: ${error.message}`;
+    fatherNotification.textContent = `⚠️ API недоступний: ${error.message}. Адреса: ${getApiBase()}`;
   }
 }
 
+
+saveApiBaseBtn.addEventListener("click", async () => {
+  const rawValue = apiBaseInput.value.trim();
+  if (!rawValue) {
+    apiStatus.textContent = "Вкажіть адресу сервера.";
+    return;
+  }
+
+  const normalized = rawValue.endsWith("/") ? rawValue.slice(0, -1) : rawValue;
+  setApiBase(normalized);
+  apiStatus.textContent = `Збережено: ${normalized}`;
+  apiStatus.textContent = `Поточна адреса сервера: ${getApiBase()}`;
+
+  await refreshDataAndRender();
+});
+
 async function init() {
   buildDaySelect();
+
+  apiBaseInput.value = getApiBase();
 
   const savedRole = getRole();
   if (savedRole) {
     roleSelect.value = savedRole;
     roleLockBadge.classList.remove("hidden");
   }
+
+  apiStatus.textContent = `Поточна адреса сервера: ${getApiBase()}`;
 
   await refreshDataAndRender();
   setInterval(refreshDataAndRender, 5000);
