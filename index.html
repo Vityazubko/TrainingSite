@@ -2,13 +2,16 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Cat Run 69</title>
+
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     body {
@@ -16,6 +19,7 @@
       font-family: Arial, sans-serif;
       overflow: hidden;
       color: white;
+      touch-action: none;
     }
 
     #game {
@@ -31,6 +35,7 @@
       left: 0;
       top: 0;
       height: 100%;
+      will-change: transform;
     }
 
     .platform {
@@ -122,6 +127,7 @@
       from {
         transform: scaleY(1);
       }
+
       to {
         transform: scaleY(1.15);
       }
@@ -131,7 +137,7 @@
       position: absolute;
       width: 48px;
       height: 35px;
-      background: #222;
+      background: transparent;
       border-radius: 50%;
       z-index: 5;
     }
@@ -219,6 +225,41 @@
       line-height: 1.4;
     }
 
+    #mobileControls {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      display: none;
+      justify-content: space-between;
+      padding: 0 25px;
+      z-index: 150;
+      pointer-events: none;
+    }
+
+    .controlBtn {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      border: 4px solid white;
+      background: rgba(0, 0, 0, 0.45);
+      color: white;
+      font-size: 34px;
+      font-weight: bold;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .controlBtn:active {
+      background: rgba(255, 179, 71, 0.9);
+      transform: scale(0.95);
+    }
+
+    #jumpBtn {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
     #message {
       position: fixed;
       inset: 0;
@@ -242,7 +283,7 @@
       margin-bottom: 15px;
     }
 
-    button {
+    .restartBtn {
       margin-top: 20px;
       padding: 12px 22px;
       border: none;
@@ -253,11 +294,54 @@
       font-weight: bold;
     }
 
-    button:hover {
+    .restartBtn:hover {
       background: #ffd27f;
+    }
+
+    @media (max-width: 900px) {
+      #mobileControls {
+        display: flex;
+      }
+
+      #info {
+        font-size: 12px;
+        top: 10px;
+        right: 10px;
+        padding: 8px 10px;
+      }
+
+      #ui {
+        font-size: 20px;
+        top: 10px;
+        left: 10px;
+        padding: 8px 10px;
+      }
+
+      .controlBtn {
+        width: 70px;
+        height: 70px;
+        font-size: 30px;
+      }
+    }
+
+    @media (max-width: 500px) {
+      #info {
+        display: none;
+      }
+
+      .controlBtn {
+        width: 65px;
+        height: 65px;
+      }
+
+      #mobileControls {
+        bottom: 15px;
+        padding: 0 18px;
+      }
     }
   </style>
 </head>
+
 <body>
   <div id="game">
     <div id="world">
@@ -273,14 +357,21 @@
     <div id="info">
       Cat Run 69<br>
       A / D або ← / → — рух<br>
-      W / Space / ↑ — стрибок
+      W / Space / ↑ — стрибок<br>
+      На телефоні — кнопки знизу
+    </div>
+
+    <div id="mobileControls">
+      <button class="controlBtn" id="leftBtn">←</button>
+      <button class="controlBtn" id="jumpBtn">⬆</button>
+      <button class="controlBtn" id="rightBtn">→</button>
     </div>
 
     <div id="message">
       <div id="messageBox">
         <h1 id="messageTitle"></h1>
         <p id="messageText"></p>
-        <button onclick="restartGame()">Грати знову</button>
+        <button class="restartBtn" onclick="restartGame()">Грати знову</button>
       </div>
     </div>
   </div>
@@ -550,6 +641,44 @@
     document.addEventListener("keyup", e => {
       keys[e.key] = false;
     });
+
+    function setupMobileButton(buttonId, keyName) {
+      const btn = document.getElementById(buttonId);
+
+      btn.addEventListener("touchstart", e => {
+        e.preventDefault();
+        keys[keyName] = true;
+      });
+
+      btn.addEventListener("touchend", e => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+
+      btn.addEventListener("touchcancel", e => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+
+      btn.addEventListener("mousedown", e => {
+        e.preventDefault();
+        keys[keyName] = true;
+      });
+
+      btn.addEventListener("mouseup", e => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+
+      btn.addEventListener("mouseleave", e => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+    }
+
+    setupMobileButton("leftBtn", "ArrowLeft");
+    setupMobileButton("rightBtn", "ArrowRight");
+    setupMobileButton("jumpBtn", " ");
 
     createWorld();
     updateUI();
