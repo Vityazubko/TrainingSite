@@ -1,89 +1,559 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uk">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Сімейний контроль фізкультури</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="container">
-      <header class="hero card">
-        <p class="chip">Сімейний трекер</p>
-        <h1>Фізкультура: Віктор і Лукян</h1>
-        <p class="subtitle">
-          База на день: <strong>10 віджимань</strong>, <strong>20 присідань</strong>,
-          <strong>25 прес</strong>, <strong>10 підстрибувань</strong>, <strong>5 кіл</strong>.
-        </p>
-        <p class="sync-note">
-          Для синхронізації між різними пристроями відкривайте сайт через один сервер (один URL).
-        </p>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cat Run 69</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
+    body {
+      background: #171727;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      color: white;
+    }
 
-      <section class="card" id="apiConfigPanel">
-        <h2>Підключення до сервера</h2>
-        <label for="apiBaseInput">Адреса сервера (приклад: http://192.168.1.50:3000)</label>
-        <input id="apiBaseInput" type="text" placeholder="http://127.0.0.1:3000" />
-        <button id="saveApiBaseBtn" type="button">Зберегти адресу сервера</button>
-        <p id="apiStatus" class="message"></p>
-      </section>
+    #game {
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(#5ec8ff, #b8f2ff 55%, #5cc46b);
+      position: relative;
+      overflow: hidden;
+    }
 
-      <section class="card">
-        <div class="role-line">
-          <h2>Хто ти?</h2>
-          <span id="roleLockBadge" class="lock-badge hidden">Роль збережена</span>
-        </div>
-        <select id="roleSelect">
-          <option value="">Оберіть роль</option>
-          <option value="father">Батько</option>
-          <option value="viktor">Віктор</option>
-          <option value="lukyan">Лукян</option>
-        </select>
-      </section>
+    #world {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+    }
 
-      <section class="card hidden" id="childPanel">
-        <h2 id="childTitle">Панель сина</h2>
+    .platform {
+      position: absolute;
+      background: #6b3f22;
+      border-top: 10px solid #36b34a;
+      border-radius: 10px;
+      box-shadow: inset 0 -8px #4a2c18;
+    }
 
-        <label for="daySelect">Вибір дня (можна за минулі дні, але не за майбутні):</label>
-        <select id="daySelect"></select>
+    #cat {
+      position: absolute;
+      width: 50px;
+      height: 42px;
+      background: #ffb347;
+      border-radius: 50% 50% 45% 45%;
+      z-index: 10;
+      transition: transform 0.05s;
+    }
 
-        <p id="debtInfo" class="debt-info"></p>
+    #cat::before,
+    #cat::after {
+      content: "";
+      position: absolute;
+      top: -13px;
+      width: 18px;
+      height: 18px;
+      background: #ffb347;
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    }
 
-        <h3>Календар виконання</h3>
-        <div id="childCalendar" class="calendar-grid"></div>
+    #cat::before {
+      left: 5px;
+    }
 
-        <h3>Підтверди виконані вправи</h3>
-        <ul class="exercise-list" id="exerciseList"></ul>
+    #cat::after {
+      right: 5px;
+    }
 
-        <label for="proofFile">Додай підтвердження (фото/відео, необов'язково):</label>
-        <input id="proofFile" type="file" accept="image/*,video/*" />
+    .eye {
+      position: absolute;
+      top: 15px;
+      width: 7px;
+      height: 7px;
+      background: black;
+      border-radius: 50%;
+    }
 
-        <button id="submitBtn">Надіслати батькові</button>
-        <p id="childMessage" class="message"></p>
-      </section>
+    .eye.left {
+      left: 14px;
+    }
 
-      <section class="card hidden" id="fatherPanel">
-        <div class="father-top">
-          <h2>Панель батька</h2>
-          <div id="fatherNotification" class="notification">🔔 Нових повідомлень: 0</div>
-        </div>
-        <ul id="incomingList" class="incoming-list"></ul>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>День</th>
-                <th>Віктор</th>
-                <th>Лукян</th>
-              </tr>
-            </thead>
-            <tbody id="statusTableBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+    .eye.right {
+      right: 14px;
+    }
 
-    <script src="script.js"></script>
-  </body>
+    .tail {
+      position: absolute;
+      right: -20px;
+      top: 17px;
+      width: 28px;
+      height: 10px;
+      background: #ffb347;
+      border-radius: 20px;
+      transform: rotate(-20deg);
+    }
+
+    .fire {
+      position: absolute;
+      width: 45px;
+      height: 55px;
+      background: linear-gradient(to top, red, orange, yellow);
+      clip-path: polygon(
+        50% 0%,
+        70% 25%,
+        90% 10%,
+        80% 60%,
+        100% 100%,
+        0% 100%,
+        20% 60%,
+        10% 20%,
+        35% 35%
+      );
+      animation: fireAnim 0.35s infinite alternate;
+      z-index: 5;
+    }
+
+    @keyframes fireAnim {
+      from {
+        transform: scaleY(1);
+      }
+      to {
+        transform: scaleY(1.15);
+      }
+    }
+
+    .spider {
+      position: absolute;
+      width: 48px;
+      height: 35px;
+      background: #222;
+      border-radius: 50%;
+      z-index: 5;
+    }
+
+    .spider::before {
+      content: "🕷️";
+      font-size: 42px;
+      position: absolute;
+      left: 1px;
+      top: -6px;
+    }
+
+    .potion {
+      position: absolute;
+      width: 35px;
+      height: 45px;
+      background: #ff4f86;
+      border-radius: 0 0 15px 15px;
+      border: 3px solid white;
+      z-index: 5;
+    }
+
+    .potion::before {
+      content: "";
+      position: absolute;
+      top: -14px;
+      left: 9px;
+      width: 12px;
+      height: 14px;
+      background: #b7f7ff;
+      border: 3px solid white;
+      border-bottom: none;
+    }
+
+    .potion::after {
+      content: "❤";
+      position: absolute;
+      top: 9px;
+      left: 7px;
+      color: white;
+      font-size: 18px;
+    }
+
+    #finish {
+      position: absolute;
+      width: 50px;
+      height: 130px;
+      background: white;
+      border-left: 8px solid black;
+      z-index: 4;
+    }
+
+    #finish::after {
+      content: "FINISH";
+      position: absolute;
+      top: 10px;
+      left: 8px;
+      color: black;
+      font-size: 12px;
+      writing-mode: vertical-rl;
+      font-weight: bold;
+    }
+
+    #ui {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      z-index: 100;
+      font-size: 24px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 10px 16px;
+      border-radius: 14px;
+    }
+
+    #info {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 10px 16px;
+      border-radius: 14px;
+      font-size: 16px;
+      text-align: right;
+      line-height: 1.4;
+    }
+
+    #message {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.6);
+      text-align: center;
+    }
+
+    #messageBox {
+      background: #22223a;
+      padding: 30px;
+      border-radius: 20px;
+      border: 3px solid white;
+      max-width: 420px;
+    }
+
+    #messageBox h1 {
+      margin-bottom: 15px;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 22px;
+      border: none;
+      border-radius: 12px;
+      background: #ffb347;
+      font-size: 18px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #ffd27f;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="world">
+      <div id="cat">
+        <div class="eye left"></div>
+        <div class="eye right"></div>
+        <div class="tail"></div>
+      </div>
+    </div>
+
+    <div id="ui">❤❤❤</div>
+
+    <div id="info">
+      Cat Run 69<br>
+      A / D або ← / → — рух<br>
+      W / Space / ↑ — стрибок
+    </div>
+
+    <div id="message">
+      <div id="messageBox">
+        <h1 id="messageTitle"></h1>
+        <p id="messageText"></p>
+        <button onclick="restartGame()">Грати знову</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const game = document.getElementById("game");
+    const world = document.getElementById("world");
+    const catEl = document.getElementById("cat");
+    const ui = document.getElementById("ui");
+    const message = document.getElementById("message");
+    const messageTitle = document.getElementById("messageTitle");
+    const messageText = document.getElementById("messageText");
+
+    const keys = {};
+
+    let cameraX = 0;
+    let gameOver = false;
+
+    const cat = {
+      x: 80,
+      y: 300,
+      w: 50,
+      h: 42,
+      vx: 0,
+      vy: 0,
+      speed: 5,
+      jump: 14,
+      onGround: false,
+      hearts: 3,
+      maxHearts: 5,
+      invincible: 0
+    };
+
+    const gravity = 0.65;
+
+    const platforms = [
+      { x: 0, y: 530, w: 500, h: 70 },
+      { x: 580, y: 470, w: 250, h: 50 },
+      { x: 900, y: 420, w: 280, h: 50 },
+      { x: 1250, y: 500, w: 300, h: 60 },
+      { x: 1620, y: 440, w: 240, h: 50 },
+      { x: 1950, y: 380, w: 260, h: 50 },
+      { x: 2300, y: 500, w: 350, h: 60 },
+      { x: 2720, y: 430, w: 280, h: 50 },
+      { x: 3100, y: 360, w: 250, h: 50 },
+      { x: 3450, y: 500, w: 350, h: 60 },
+      { x: 3880, y: 450, w: 260, h: 50 },
+      { x: 4240, y: 390, w: 260, h: 50 },
+      { x: 4600, y: 520, w: 550, h: 70 }
+    ];
+
+    const hazards = [
+      { type: "fire", x: 330, y: 475, w: 45, h: 55 },
+      { type: "spider", x: 680, y: 435, w: 48, h: 35, startX: 620, endX: 770, dir: 1 },
+      { type: "fire", x: 1020, y: 365, w: 45, h: 55 },
+      { type: "spider", x: 1320, y: 465, w: 48, h: 35, startX: 1270, endX: 1500, dir: 1 },
+      { type: "fire", x: 1710, y: 385, w: 45, h: 55 },
+      { type: "spider", x: 2020, y: 345, w: 48, h: 35, startX: 1970, endX: 2160, dir: 1 },
+      { type: "fire", x: 2450, y: 445, w: 45, h: 55 },
+      { type: "spider", x: 2800, y: 395, w: 48, h: 35, startX: 2740, endX: 2970, dir: 1 },
+      { type: "fire", x: 3200, y: 305, w: 45, h: 55 },
+      { type: "spider", x: 3570, y: 465, w: 48, h: 35, startX: 3500, endX: 3760, dir: 1 },
+      { type: "fire", x: 3970, y: 395, w: 45, h: 55 },
+      { type: "spider", x: 4700, y: 485, w: 48, h: 35, startX: 4630, endX: 5050, dir: 1 }
+    ];
+
+    const potions = [
+      { x: 760, y: 410, w: 35, h: 45, taken: false },
+      { x: 1460, y: 455, w: 35, h: 45, taken: false },
+      { x: 2140, y: 335, w: 35, h: 45, taken: false },
+      { x: 2950, y: 385, w: 35, h: 45, taken: false },
+      { x: 4380, y: 345, w: 35, h: 45, taken: false }
+    ];
+
+    const finish = {
+      x: 5100,
+      y: 390,
+      w: 50,
+      h: 130
+    };
+
+    function createWorld() {
+      world.style.width = "5300px";
+
+      document.querySelectorAll(".platform, .fire, .spider, .potion, #finish").forEach(e => e.remove());
+
+      platforms.forEach(p => {
+        const el = document.createElement("div");
+        el.className = "platform";
+        el.style.left = p.x + "px";
+        el.style.top = p.y + "px";
+        el.style.width = p.w + "px";
+        el.style.height = p.h + "px";
+        world.appendChild(el);
+      });
+
+      hazards.forEach(h => {
+        const el = document.createElement("div");
+        el.className = h.type;
+        el.style.left = h.x + "px";
+        el.style.top = h.y + "px";
+        el.style.width = h.w + "px";
+        el.style.height = h.h + "px";
+        h.el = el;
+        world.appendChild(el);
+      });
+
+      potions.forEach(p => {
+        const el = document.createElement("div");
+        el.className = "potion";
+        el.style.left = p.x + "px";
+        el.style.top = p.y + "px";
+        el.style.width = p.w + "px";
+        el.style.height = p.h + "px";
+        p.el = el;
+        world.appendChild(el);
+      });
+
+      const finishEl = document.createElement("div");
+      finishEl.id = "finish";
+      finishEl.style.left = finish.x + "px";
+      finishEl.style.top = finish.y + "px";
+      finishEl.style.width = finish.w + "px";
+      finishEl.style.height = finish.h + "px";
+      world.appendChild(finishEl);
+    }
+
+    function updateUI() {
+      ui.textContent = "❤".repeat(cat.hearts) + "♡".repeat(cat.maxHearts - cat.hearts);
+    }
+
+    function rectsTouch(a, b) {
+      return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      );
+    }
+
+    function damageCat() {
+      if (cat.invincible > 0 || gameOver) return;
+
+      cat.hearts--;
+      cat.invincible = 90;
+      updateUI();
+
+      if (cat.hearts <= 0) {
+        endGame(false);
+      }
+    }
+
+    function endGame(win) {
+      gameOver = true;
+      message.style.display = "flex";
+
+      if (win) {
+        messageTitle.textContent = "Перемога!";
+        messageText.textContent = "Котик пройшов довгий рівень Cat Run 69!";
+      } else {
+        messageTitle.textContent = "Котик програв";
+        messageText.textContent = "У котика закінчилися серця. Спробуй ще раз!";
+      }
+    }
+
+    function restartGame() {
+      location.reload();
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      cat.vx = 0;
+
+      if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
+        cat.vx = -cat.speed;
+        catEl.style.transform = "scaleX(-1)";
+      }
+
+      if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
+        cat.vx = cat.speed;
+        catEl.style.transform = "scaleX(1)";
+      }
+
+      if ((keys[" "] || keys["ArrowUp"] || keys["w"] || keys["W"]) && cat.onGround) {
+        cat.vy = -cat.jump;
+        cat.onGround = false;
+      }
+
+      cat.vy += gravity;
+      cat.x += cat.vx;
+      cat.y += cat.vy;
+
+      cat.onGround = false;
+
+      platforms.forEach(p => {
+        if (rectsTouch(cat, p)) {
+          const previousBottom = cat.y + cat.h - cat.vy;
+
+          if (previousBottom <= p.y) {
+            cat.y = p.y - cat.h;
+            cat.vy = 0;
+            cat.onGround = true;
+          }
+        }
+      });
+
+      if (cat.y > 800) {
+        damageCat();
+        cat.x = Math.max(80, cat.x - 250);
+        cat.y = 200;
+        cat.vy = 0;
+      }
+
+      hazards.forEach(h => {
+        if (h.type === "spider") {
+          h.x += h.dir * 2;
+
+          if (h.x < h.startX || h.x > h.endX) {
+            h.dir *= -1;
+          }
+
+          h.el.style.left = h.x + "px";
+        }
+
+        if (rectsTouch(cat, h)) {
+          damageCat();
+        }
+      });
+
+      potions.forEach(p => {
+        if (!p.taken && rectsTouch(cat, p)) {
+          p.taken = true;
+          p.el.style.display = "none";
+
+          if (cat.hearts < cat.maxHearts) {
+            cat.hearts++;
+            updateUI();
+          }
+        }
+      });
+
+      if (rectsTouch(cat, finish)) {
+        endGame(true);
+      }
+
+      if (cat.invincible > 0) {
+        cat.invincible--;
+        catEl.style.opacity = cat.invincible % 10 < 5 ? "0.45" : "1";
+      } else {
+        catEl.style.opacity = "1";
+      }
+
+      cameraX = Math.max(0, cat.x - window.innerWidth / 2);
+      world.style.transform = `translateX(${-cameraX}px)`;
+
+      catEl.style.left = cat.x + "px";
+      catEl.style.top = cat.y + "px";
+
+      requestAnimationFrame(update);
+    }
+
+    document.addEventListener("keydown", e => {
+      keys[e.key] = true;
+    });
+
+    document.addEventListener("keyup", e => {
+      keys[e.key] = false;
+    });
+
+    createWorld();
+    updateUI();
+    update();
+  </script>
+</body>
 </html>
